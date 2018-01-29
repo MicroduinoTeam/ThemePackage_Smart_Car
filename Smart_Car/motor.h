@@ -1,5 +1,5 @@
 #include <Microduino_Motor.h>
-
+#include <Microduino_ColorLED.h>
 ColorLED strip = ColorLED(LED_NUM, PIN_LED);
 
 /***********定义彩灯颜色*/
@@ -37,6 +37,21 @@ uint32_t micTime = 0;
 uint32_t trackTime = 0, trackTime1 = 0;
 
 bool fback = true;
+uint32_t time1;
+void ledBlink(uint32_t c, uint8_t n, uint8_t wait) {
+  if (millis() - time1 > wait) {
+    if (strip.getPixelColor(n) == 0x0000) {
+      strip.setPixelColor(n, c);
+      tone(PIN_BUZZER, 2000);
+    } else {
+      strip.setPixelColor(n, 0);
+      noTone(PIN_BUZZER);
+    }
+    strip.show();
+
+    time1 = millis();
+  }
+}
 
 void motorUpdate(int16_t speed1, int16_t speed2)
 {
@@ -57,14 +72,14 @@ void bleControl(int8_t bleCmd)
     case CMD_UP:
       strip.setAllLED(COLOR_COLD);
       strip.show();
-      leftSpeed = MAX_THROTTLE;
+      leftSpeed = -MAX_THROTTLE;
       rightSpeed = MAX_THROTTLE;
       fback = true;
       break;
     case CMD_DOWN:
       strip.setAllLED(COLOR_RED);
       strip.show();
-      leftSpeed = -(255 - MAX_THROTTLE);
+      leftSpeed = (255 - MAX_THROTTLE);
       rightSpeed = -(255 - MAX_THROTTLE);
       fback = false;
       break;
@@ -78,35 +93,37 @@ void bleControl(int8_t bleCmd)
       }
       else
       {
-        leftSpeed = -MAX_THROTTLE + STEER;
-        rightSpeed = -MAX_THROTTLE + - STEER;
+        leftSpeed = MAX_THROTTLE - STEER;
+        rightSpeed = MAX_THROTTLE + STEER;
         strip.setOneLED(RIGHT, COLOR_NONE);
         strip.show();
       }
-      //ledBlink(500, COLOR_RED, LEFT);
+      ledBlink(COLOR_YELLOW, LEFT, 200 );
+
       break;
     case CMD_RIGHT:
       if (fback)
       {
-        leftSpeed = MAX_THROTTLE + STEER;
-        rightSpeed = MAX_THROTTLE - STEER;
+        leftSpeed = -MAX_THROTTLE + STEER;
+        rightSpeed = -MAX_THROTTLE  - STEER;
         strip.setOneLED(LEFT, COLOR_NONE);
         strip.show();
       }
       else
       {
-        leftSpeed = -MAX_THROTTLE - STEER;
-        rightSpeed = -MAX_THROTTLE + STEER;
+        leftSpeed = -MAX_THROTTLE + STEER;
+        rightSpeed = -MAX_THROTTLE  - STEER;
         strip.setOneLED(LEFT, COLOR_NONE);
         strip.show();
       }
-      //ledBlink(500, COLOR_RED, RIGHT);
+      ledBlink( COLOR_YELLOW, RIGHT, 200);
       break;
     case CMD_STOP:
       if (leftSpeed != 0 || rightSpeed != 0)
       {
         strip.setAllLED(COLOR_NONE);
         strip.show();
+        noTone(PIN_BUZZER);
         leftSpeed = 0;
         rightSpeed = 0;
       }
@@ -120,14 +137,14 @@ void trackControl(uint16_t trackVal1, uint16_t trackVal2)
 {
   if (trackVal1 < TRACK_THRESHOLD && trackVal2 < TRACK_THRESHOLD)
   {
-    leftSpeed = MAX_THROTTLE - tackforward;
+    leftSpeed = -MAX_THROTTLE + tackforward;
     rightSpeed = MAX_THROTTLE - tackforward;
     strip.setAllLED(COLOR_COLD);
     strip.show();
   }
   else if (trackVal1 < TRACK_THRESHOLD && trackVal2 > TRACK_THRESHOLD)
   {
-    leftSpeed = MAX_THROTTLE - tackforward + tacksteer;
+    leftSpeed = -MAX_THROTTLE + tackforward + tacksteer;
     rightSpeed = MAX_THROTTLE - tackforward - tacksteer;
     strip.setOneLED(LEFT, COLOR_WARM);
     strip.setOneLED(RIGHT, COLOR_NONE);
@@ -135,7 +152,7 @@ void trackControl(uint16_t trackVal1, uint16_t trackVal2)
   }
   else if (trackVal1 > TRACK_THRESHOLD && trackVal2 < TRACK_THRESHOLD)
   {
-    leftSpeed = MAX_THROTTLE - tackforward - tacksteer;
+    leftSpeed = -MAX_THROTTLE + tackforward + tacksteer;
     rightSpeed = MAX_THROTTLE - tackforward + tacksteer;
     strip.setOneLED(RIGHT, COLOR_WARM);
     strip.setOneLED(LEFT, COLOR_NONE);
@@ -155,7 +172,7 @@ void micControl(long micVal) {
     micTime = millis() + 6000;
   else if (millis() < micTime - 4000 && micTime > 0)
   {
-    leftSpeed = MAX_THROTTLE;
+    leftSpeed = -MAX_THROTTLE;
     rightSpeed = MAX_THROTTLE;
     delay(2);
   }
